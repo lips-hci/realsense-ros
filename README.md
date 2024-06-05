@@ -1,3 +1,15 @@
+## Using LIPSege AE450 sensor in [ISAAC ROS 2.1.0](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/releases/tag/v2.1.0)
+NOTE: We have not yet verify AE450 on Isaac ros 3.0.0, this version '4.51.1-lipsedge' supports Isaac ros 2.1.0 release.
+
+### Setup instruction
+
+Clone this realsense-ros repository under `${ISAAC_ROS_WS}/src`.
+```
+cd ${ISAAC_ROS_WS}/src
+git clone https://github.com/lips-hci/realsense-ros.git -b 4.51.1-lipsedge
+```
+Next step you need LIPS modified repository 'isaac_ros_common' to rebuild the container image using `Dockerfile.lipsedge` and launch camera. Please contact us.
+
 
 <h1 align="center">
    <img src="https://www.intelrealsense.com/wp-content/uploads/2020/09/intel-realsense-logo-360px.png" alt="Intel® RealSense™" title="Intel® RealSense™" />
