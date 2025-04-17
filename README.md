@@ -1,9 +1,9 @@
 # ROS2 Wrapper for Intel&reg; RealSense&trade; Devices
-These are packages for using Intel RealSense cameras (D400 and L500 series, SR300 camera and T265 Tracking Module) with ROS2.
+These are packages for using LIPSedge cameras (AE400/450 and AE430/470 series) with ROS2.
 
 This version supports ROS2 Dashing, Eloquent, Foxy, Galactic and Rolling.
 
-LibRealSense supported version: v2.51.1 (see [realsense2_camera release notes](https://github.com/IntelRealSense/realsense-ros/releases))
+LIPSedge AE4xx camera supported LibRS version: v2.43.0
 
 ## Please notice: if you are moving from RealSense [ROS2 branch](https://github.com/IntelRealSense/realsense-ros/tree/ros2) to ROS2-beta:
 - **Changed Parameters**:
@@ -38,16 +38,15 @@ LibRealSense supported version: v2.51.1 (see [realsense2_camera release notes](h
    - [ROS2 Eloquent](https://docs.ros.org/en/eloquent/Installation/Linux-Install-Debians.html)
 
 
-### Step 2: Install the latest Intel&reg; RealSense&trade; SDK 2.0
+### Step 2: Install the latest LIPSedge&reg; AE4xx RealSense&trade; SDK
 
-- #### Option 1: Install librealsense2 debian package (Not supported in Ubuntu 22.04 yet)
-   - Jetson users - use the [Jetson Installation Guide](https://github.com/IntelRealSense/librealsense/blob/master/doc/installation_jetson.md)
-   - Otherwise, install from [Linux Debian Installation Guide](https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md#installing-the-packages)
-      - In this case treat yourself as a developer: make sure to follow the instructions to also install librealsense2-dev and librealsense2-dkms packages
-
-- #### Option 2: Build from source
-  - Download the latest [Intel&reg; RealSense&trade; SDK 2.0](https://github.com/IntelRealSense/librealsense/releases/tag/v2.51.1)
-  - Follow the instructions under [Linux Installation](https://github.com/IntelRealSense/librealsense/blob/master/doc/installation.md)
+- #### Option 1: Build from source
+  - AE400/450 camera
+    - Download the latest [LIPSedge&reg; AE400 RealSense&trade; SDK](https://github.com/lips-hci/ae400-realsense-sdk)
+    - Check the [build instructions](https://github.com/lips-hci/ae400-realsense-sdk?tab=readme-ov-file#build-instruction)
+  - AE430/470 camera
+    - Download the latest [LIPSedge&reg; AE470 RealSense&trade; SDK](https://github.com/lips-hci/ae470-realsense-sdk)
+    - Check the [build instructions](https://github.com/lips-hci/ae470-realsense-sdk?tab=readme-ov-file#build-instruction-for-ubuntu-linux)
 
 
 ### Step 3: Install Intel&reg; RealSense&trade; ROS2 wrapper from sources
@@ -56,9 +55,9 @@ LibRealSense supported version: v2.51.1 (see [realsense2_camera release notes](h
       mkdir -p ~/ros2_ws/src
       cd ~/ros2_ws/src/
       ```
-   - Clone the latest ROS2 Intel&reg; RealSense&trade;  wrapper from [here](https://github.com/IntelRealSense/realsense-ros.git) into '~/ros2_ws/src/'
+   - Clone the branch '4.51.1-lipsedge' of ROS2 Intel&reg; RealSense&trade;  wrapper from [here](https://github.com/lips-hci/realsense-ros.git) into '~/ros2_ws/src/'
       ```bashrc
-      git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-beta
+      git clone https://github.com/lips-hci/realsense-ros.git -b 4.51.1-lipsedge
       cd ~/ros2_ws
       ```
 ### Step 4: Install dependencies
