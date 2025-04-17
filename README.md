@@ -8,7 +8,7 @@ Clone this realsense-ros repository under `${ISAAC_ROS_WS}/src`.
 cd ${ISAAC_ROS_WS}/src
 git clone https://github.com/lips-hci/realsense-ros.git -b 4.51.1-lipsedge
 ```
-Next step you need LIPS modified repository 'isaac_ros_common' to rebuild the container image using `Dockerfile.lipsedge` and launch camera. Please contact us.
+Next step you need LIPS modified repository '[isaac_ros_common](https://github.com/lips-hci/isaac_ros_common)' to rebuild the container image using `Dockerfile.lipsedge` and launch camera. Please contact us.
 
 
 <h1 align="center">
