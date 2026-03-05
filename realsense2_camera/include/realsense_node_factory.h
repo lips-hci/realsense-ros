@@ -45,6 +45,7 @@ namespace realsense2_camera
         rs2::device _device;
         std::unique_ptr<BaseRealSenseNode> _realSenseNode;
         std::string _serial_no;
+        std::string _ip4_address;
         std::string _usb_port_id;
         std::string _device_type;
         double _wait_for_device_timeout;

@@ -74,6 +74,7 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
         }
         else
         {
+            ROS_INFO_STREAM("Found RealSense devices, list size = " << list.size() << std::endl);
             bool found = false;
             rs2::device dev;
             for (size_t count = 0; count < list.size(); count++)
@@ -87,6 +88,9 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
                     ROS_WARN_STREAM("Device " << count+1 << "/" << list.size() << " failed with exception: " << ex.what());
                     continue;
                 }
+                // LIPS HACK: double confirm current AE4 device ip4 address
+                std::string ip4 = dev.get_info(RS2_CAMERA_INFO_IP_ADDRESS);
+                ROS_INFO_STREAM("Device with IP address " << ip4 << " was found.");
                 auto sn = dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
                 ROS_INFO_STREAM("Device with serial number " << sn << " was found."<<std::endl);
                 std::string pn = dev.get_info(RS2_CAMERA_INFO_PHYSICAL_PORT);
@@ -121,7 +125,19 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
                     found_device_type = std::regex_search(name, match_results, device_type_regex);
                 }
 
-                if ((_serial_no.empty() || sn == _serial_no) && (_usb_port_id.empty() || port_id == _usb_port_id) && found_device_type)
+                if (!_ip4_address.empty())
+                {
+                    if (ip4 == _ip4_address)
+                    {
+                        ROS_INFO_STREAM("Device " << _ip4_address << " found is true.");
+                        _device = dev;
+                        _serial_no = sn;
+                        _ip4_address = ip4;
+                        found = true;
+                        break;
+                    }
+                }
+                else if ((_serial_no.empty() || sn == _serial_no) && (_usb_port_id.empty() || port_id == _usb_port_id) && found_device_type)
                 {
                     _device = dev;
                     _serial_no = sn;
@@ -133,8 +149,17 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
             {
                 std::string msg ("The requested device with ");
                 bool add_and(false);
+                if (!_ip4_address.empty())
+                {
+                    msg += "ip4 address " + _ip4_address;
+                    add_and = true;
+                }
                 if (!_serial_no.empty())
                 {
+                    if (add_and)
+                    {
+                        msg += " and ";
+                    }
                     msg += "serial number " + _serial_no;
                     add_and = true;
                 }
@@ -156,7 +181,7 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
                     msg += "device name containing " + _device_type;
                 }
                 msg += " is NOT found. Will Try again.";
-                ROS_ERROR_STREAM(msg);
+                ROS_WARN_STREAM(msg);
             }
             else
             {
@@ -181,7 +206,7 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
             ROS_INFO("Resetting device...");
             _device.hardware_reset();
             _device = rs2::device();
-            
+
         }
         catch(const std::exception& ex)
         {
@@ -243,7 +268,7 @@ void RealSenseNodeFactory::init()
             ROS_WARN("***************************************************");
         }
 
-        auto severity = rs2_log_severity::RS2_LOG_SEVERITY_WARN;
+        auto severity = rs2_log_severity::RS2_LOG_SEVERITY_INFO;
         tryGetLogSeverity(severity);
         if (rs2_log_severity::RS2_LOG_SEVERITY_DEBUG == severity)
             console_bridge::setLogLevel(console_bridge::CONSOLE_BRIDGE_LOG_DEBUG);
@@ -255,6 +280,7 @@ void RealSenseNodeFactory::init()
         std::cout << "Press <ENTER> key to continue." << std::endl;
         std::cin.get();
 #endif
+        _ip4_address = declare_parameter("ip4_address", rclcpp::ParameterValue("")).get<rclcpp::PARAMETER_STRING>();
         _serial_no = declare_parameter("serial_no", rclcpp::ParameterValue("")).get<rclcpp::PARAMETER_STRING>();
         _usb_port_id = declare_parameter("usb_port_id", rclcpp::ParameterValue("")).get<rclcpp::PARAMETER_STRING>();
         _device_type = declare_parameter("device_type", rclcpp::ParameterValue("")).get<rclcpp::PARAMETER_STRING>();
