@@ -44,6 +44,7 @@ namespace realsense2_camera
         rclcpp::Node::SharedPtr _node;
         rs2::device _device;
         std::unique_ptr<BaseRealSenseNode> _realSenseNode;
+        rs2::context _ctx;
         std::string _serial_no;
         std::string _ip4_address;
         std::string _usb_port_id;

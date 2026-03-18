@@ -1,9 +1,9 @@
 // License: Apache 2.0. See LICENSE file in root directory.
 // Copyright(c) 2022 Intel Corporation. All Rights Reserved
 
-#include "realsense_node_factory.h"
-#include "base_realsense_node.h"
-#include "context_singleton_wrapper.h"
+#include "../include/realsense_node_factory.h"
+#include "../include/base_realsense_node.h"
+#include "../include/t265_realsense_node.h"
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -198,6 +198,12 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
         }
     }
 
+    bool remove_tm2_handle(_device && RS_T265_PID != std::stoi(_device.get_info(RS2_CAMERA_INFO_PRODUCT_ID), 0, 16));
+    if (remove_tm2_handle)
+    {
+        _ctx.unload_tracking_module();
+    }
+
     if (_device && _initial_reset)
     {
         _initial_reset = false;
@@ -295,7 +301,12 @@ void RealSenseNodeFactory::init()
         {
             {
                 ROS_INFO_STREAM("publish topics from rosbag file: " << rosbag_filename.c_str());
-                _device = RSContextSingletonWrapper::getInstance().load_device(rosbag_filename.c_str());
+                auto pipe = std::make_shared<rs2::pipeline>();
+                rs2::config cfg;
+                cfg.enable_device_from_file(rosbag_filename.c_str(), false);
+                cfg.enable_all_streams();
+                pipe->start(cfg); //File will be opened in read mode at this point
+                _device = pipe->get_active_profile().get_device();
                 _serial_no = _device.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
             }
             if (_device)
@@ -315,11 +326,11 @@ void RealSenseNodeFactory::init()
                 {
                     try
                     {
-                        getDevice(RSContextSingletonWrapper::getInstance().query_devices());
+                        getDevice(_ctx.query_devices());
                         if (_device)
                         {
                             std::function<void(rs2::event_information&)> change_device_callback_function = [this](rs2::event_information& info){changeDeviceCallback(info);};
-                            RSContextSingletonWrapper::getInstance().set_devices_changed_callback(change_device_callback_function);
+                            _ctx.set_devices_changed_callback(change_device_callback_function);
                             startDevice();
                         }
                         else
@@ -392,6 +403,9 @@ void RealSenseNodeFactory::startDevice()
         case RS_L515_PID:
         case RS_L535_PID:
             _realSenseNode = std::unique_ptr<BaseRealSenseNode>(new BaseRealSenseNode(*this, _device, _parameters, this->get_node_options().use_intra_process_comms()));
+            break;
+        case RS_T265_PID:
+            _realSenseNode = std::unique_ptr<T265RealsenseNode>(new T265RealsenseNode(*this, _device, _parameters, this->get_node_options().use_intra_process_comms()));
             break;
         default:
             ROS_FATAL_STREAM("Unsupported device!" << " Product ID: 0x" << pid_str);

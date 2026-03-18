@@ -158,10 +158,10 @@ else()
 endif()
 
 set(INCLUDES
-    include/context_singleton_wrapper.h
     include/constants.h
     include/realsense_node_factory.h
     include/base_realsense_node.h
+    include/t265_realsense_node.h
     include/ros_sensor.h
     include/ros_utils.h
     include/dynamic_params.h
