@@ -12,6 +12,7 @@
 #include <thread>
 #include <sys/time.h>
 #include <regex>
+#include <chrono>
 
 using namespace realsense2_camera;
 
@@ -26,7 +27,7 @@ RealSenseNodeFactory::RealSenseNodeFactory(const rclcpp::NodeOptions & node_opti
 }
 
 RealSenseNodeFactory::RealSenseNodeFactory(const std::string & node_name, const std::string & ns,
-                                           const rclcpp::NodeOptions & node_options) : 
+                                           const rclcpp::NodeOptions & node_options) :
     Node(node_name, ns, node_options),
     _logger(this->get_logger())
 {
@@ -66,6 +67,7 @@ std::string RealSenseNodeFactory::parseUsbPort(std::string line)
 
 void RealSenseNodeFactory::getDevice(rs2::device_list list)
 {
+    static std::chrono::steady_clock::time_point last_reset_time{};
     if (!_device)
     {
         if (0 == list.size())
@@ -115,7 +117,7 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
                 }
                 else
                 {
-                    ROS_INFO_STREAM("Device with port number " << port_id << " was found.");                    
+                    ROS_INFO_STREAM("Device with port number " << port_id << " was found.");
                 }
                 bool found_device_type(true);
                 if (!_device_type.empty())
@@ -129,7 +131,7 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
                 {
                     if (ip4 == _ip4_address)
                     {
-                        ROS_INFO_STREAM("Device " << _ip4_address << " found is true.");
+                        ROS_INFO_STREAM("Requested device with ip " << _ip4_address << " found is true.");
                         _device = dev;
                         _serial_no = sn;
                         _ip4_address = ip4;
@@ -180,7 +182,29 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
                     }
                     msg += "device name containing " + _device_type;
                 }
-                msg += " is NOT found. Will Try again.";
+                auto now = std::chrono::steady_clock::now();
+                if (now - last_reset_time >= std::chrono::seconds(120))
+                {
+                    msg += " is NOT found. Will Try again.";
+
+                    //LIPS HACK: force reset the device if we cannot connect it
+                    ROS_WARN_STREAM("WORKAROUND: reset device " << _ip4_address << " before our next try.");
+
+                    // Construct the command string: "device-reboot now"
+                    std::string command = "/usr/local/bin/lips-ae470-reboot " + _ip4_address;
+                    int ret = system(command.c_str());
+
+                    if (ret == 0)
+                        ROS_INFO_STREAM("reset command executed successfully.");
+                    else
+                        ROS_INFO_STREAM("reset command failed with code: " << ret);
+
+                    last_reset_time = now;
+                }
+                else
+                {
+                    msg += " is NOT found. Waiting for device back to work...";
+                }
                 ROS_WARN_STREAM(msg);
             }
             else
@@ -420,7 +444,7 @@ void RealSenseNodeFactory::startDevice()
         std::cerr << "Failed to start device: " << e.what() << '\n';
         _device.hardware_reset();
         _device = rs2::device();
-    }    
+    }
 }
 
 void RealSenseNodeFactory::tryGetLogSeverity(rs2_log_severity& severity) const
