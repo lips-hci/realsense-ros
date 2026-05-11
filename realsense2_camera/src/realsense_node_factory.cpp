@@ -19,6 +19,7 @@ using namespace realsense2_camera;
 #define REALSENSE_ROS_EMBEDDED_VERSION_STR (VAR_ARG_STRING(VERSION: REALSENSE_ROS_MAJOR_VERSION.REALSENSE_ROS_MINOR_VERSION.REALSENSE_ROS_PATCH_VERSION))
 constexpr auto realsense_ros_camera_version = REALSENSE_ROS_EMBEDDED_VERSION_STR;
 
+
 RealSenseNodeFactory::RealSenseNodeFactory(const rclcpp::NodeOptions & node_options) :
     Node("camera", "/", node_options),
     _logger(this->get_logger())
@@ -76,7 +77,7 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
         }
         else
         {
-            ROS_INFO_STREAM("Found RealSense devices, list size = " << list.size() << std::endl);
+            ROS_INFO_STREAM("Found RealSense devices, list size = " << list.size());
             bool found = false;
             rs2::device dev;
             for (size_t count = 0; count < list.size(); count++)
@@ -94,10 +95,10 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
                 std::string ip4 = dev.get_info(RS2_CAMERA_INFO_IP_ADDRESS);
                 ROS_INFO_STREAM("Device with IP address " << ip4 << " was found.");
                 auto sn = dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
-                ROS_INFO_STREAM("Device with serial number " << sn << " was found."<<std::endl);
+                ROS_INFO_STREAM("Device with serial number " << sn << " was found.");
                 std::string pn = dev.get_info(RS2_CAMERA_INFO_PHYSICAL_PORT);
                 std::string name = dev.get_info(RS2_CAMERA_INFO_NAME);
-                ROS_INFO_STREAM("Device with physical ID " << pn << " was found.");
+                ROS_DEBUG_STREAM("Device with physical ID " << pn << " was found.");
                 std::vector<std::string> results;
                 ROS_INFO_STREAM("Device with name " << name << " was found.");
                 std::string port_id = parseUsbPort(pn);
@@ -117,7 +118,7 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
                 }
                 else
                 {
-                    ROS_INFO_STREAM("Device with port number " << port_id << " was found.");
+                    ROS_DEBUG_STREAM("Device with port number " << port_id << " was found.");
                 }
                 bool found_device_type(true);
                 if (!_device_type.empty())
@@ -182,30 +183,41 @@ void RealSenseNodeFactory::getDevice(rs2::device_list list)
                     }
                     msg += "device name containing " + _device_type;
                 }
-                auto now = std::chrono::steady_clock::now();
-                if (now - last_reset_time >= std::chrono::seconds(120))
-                {
-                    msg += " is NOT found. Will Try again.";
 
+                msg += " is NOT found. Will Try again.";
+
+                ROS_ERROR_STREAM(msg);
+
+                auto now = std::chrono::steady_clock::now();
+                auto elapse = now - last_reset_time;
+                std::chrono::seconds reset_guard_time(static_cast<int>(_wait_time_between_reset));
+                if ( elapse > reset_guard_time)
+                {
                     //LIPS HACK: force reset the device if we cannot connect it
-                    ROS_WARN_STREAM("WORKAROUND: reset device " << _ip4_address << " before our next try.");
+                    ROS_INFO_STREAM("Run device reset before next try...");
 
                     // Construct the command string: "device-reboot now"
                     std::string command = "/usr/local/bin/lips-ae470-reboot " + _ip4_address;
                     int ret = system(command.c_str());
 
-                    if (ret == 0)
-                        ROS_INFO_STREAM("reset command executed successfully.");
-                    else
-                        ROS_INFO_STREAM("reset command failed with code: " << ret);
-
+                    //HACK: must update this time count because system command always returns 0
+                    // our reboot command might NOT actually run successfully
                     last_reset_time = now;
+
+                    if (ret == 0) {
+                        std::chrono::milliseconds rest_ms(static_cast<int>(_wait_time_after_reset*1e3));
+                        ROS_INFO_STREAM("Reset command invoked and sleep for milliseconds " << rest_ms.count() << " (wait_time_after_reset = " << _wait_time_after_reset << ")");
+                        std::this_thread::sleep_for(rest_ms);
+                        //return getDevice(list); -- the caller init() will also sleep '_reconnect_timeout' ms and try getDevice() again
+                    } else {
+                        ROS_WARN_STREAM("Reset command invoked with failed code: " << ret);
+                    }
                 }
                 else
                 {
-                    msg += " is NOT found. Waiting for device back to work...";
+                    auto left = std::chrono::duration_cast<std::chrono::seconds>(reset_guard_time - elapse);
+                    ROS_INFO_STREAM("Next try for device reset is " << left.count() << " seconds left.");
                 }
-                ROS_WARN_STREAM(msg);
             }
             else
             {
@@ -316,6 +328,8 @@ void RealSenseNodeFactory::init()
         _device_type = declare_parameter("device_type", rclcpp::ParameterValue("")).get<rclcpp::PARAMETER_STRING>();
         _wait_for_device_timeout = declare_parameter("wait_for_device_timeout", rclcpp::ParameterValue(-1.0)).get<rclcpp::PARAMETER_DOUBLE>();
         _reconnect_timeout = declare_parameter("reconnect_timeout", 6.0);
+        _wait_time_after_reset = declare_parameter("wait_time_after_reset", 12.0);
+        _wait_time_between_reset = declare_parameter("wait_time_between_reset", 90.0);
 
         // A ROS2 hack: until a better way is found to avoid auto convertion of strings containing only digits to integers:
         if (_serial_no.front() == '_') _serial_no = _serial_no.substr(1);    // remove '_' prefix
@@ -374,6 +388,7 @@ void RealSenseNodeFactory::init()
                                     actual_timespan = std::chrono::milliseconds (static_cast<int>(std::min(max_timespan_secs, time_to_timeout) * 1e3));
                                 }
                             }
+                            ROS_INFO_STREAM("Before next try, sleep for milliseconds " << actual_timespan.count() << " (reconnect_timeout = " << timespan.count() << " ms)");
                             std::this_thread::sleep_for(actual_timespan);
                         }
                     }

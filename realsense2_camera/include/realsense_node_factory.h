@@ -50,7 +50,9 @@ namespace realsense2_camera
         std::string _usb_port_id;
         std::string _device_type;
         double _wait_for_device_timeout;
-        double _reconnect_timeout;
+        double _reconnect_timeout; // default 6 seconds
+        double _wait_time_after_reset; // default 12.0 seconds
+        double _wait_time_between_reset; // default 90 seconds
         bool _initial_reset;
         std::thread _query_thread;
         bool _is_alive;
